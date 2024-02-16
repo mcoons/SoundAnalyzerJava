@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.Timer;
@@ -12,11 +13,16 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileFilter;
 
  
 public class Player extends JFrame implements ActionListener, ChangeListener
@@ -51,15 +57,16 @@ public class Player extends JFrame implements ActionListener, ChangeListener
     String formattedPositionSeconds;
     String formattedPositionTime;
     
-    
+    JMenuBar menuBar;
+    JMenu fileMenu, helpMenu;
+    JMenuItem songListItem, exitItem, aboutItem;
     
 	Player(AudioManager audioManager) throws IOException
 	{
 		this.audioManager = audioManager;
-//		scrubberTimer = new Timer();
 		
 		this.setTitle("Music Player");
-		this.setSize(400, 200);
+		this.setSize(400, 250);
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.getContentPane().setBackground(Color.cyan);
 		this.setResizable(false);
@@ -68,17 +75,54 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 
 		ImageIcon image = new ImageIcon(originalImage);
 				
-	
+		// Menu Bar
+		
+		menuBar = new JMenuBar();
+		
+		// File menu
+		
+		fileMenu = new JMenu("File");
+		fileMenu.setMnemonic(KeyEvent.VK_F);  // alt/option-F
+		
+		songListItem = new JMenuItem("Song List");
+		songListItem.setMnemonic(KeyEvent.VK_L);  //  L for List
+		songListItem.addActionListener(this);
+
+		exitItem = new JMenuItem("Exit");
+		exitItem.setMnemonic(KeyEvent.VK_X);  // X for Exit
+		exitItem.addActionListener(this);
+		
+		fileMenu.add(songListItem);
+		fileMenu.add(exitItem);
+		
+		// Help menu
+		
+		helpMenu = new JMenu("Help");
+		helpMenu.setMnemonic(KeyEvent.VK_H);  // alt/option-H
+		
+		aboutItem = new JMenuItem("About");
+		aboutItem.setMnemonic(KeyEvent.VK_A);  // A for About
+		aboutItem.addActionListener(this);
+
+		helpMenu.add(aboutItem);
+		
+		menuBar.add(fileMenu);
+		menuBar.add(helpMenu);
+		
+		
+		this.setJMenuBar(menuBar);
+		
+		// Player Items
 		
 		currentSongLabel = new JLabel("Current Song");
 		currentSongLabel.setBounds(10,0,100,25);
 		this.add(currentSongLabel);
 		
-		currentSong = new JLabel(audioManager.GetCurrentTitle());
+		currentSong = new JLabel(audioManager.getCurrentTitle());
 		currentSong.setBounds(115,0,300,25);
 		this.add(currentSong);
 		
-
+		// Player Buttons
 		
 		playButton = new JButton("Play");
 		playButton.setBounds(0,30,100,25);
@@ -104,7 +148,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		nextButton.setFocusable(false);
 		this.add(nextButton);
 		
-		
+		// Volume Slider
 		
 		volumeLabel = new JLabel("Volume");
 		volumeLabel.setBounds(10,60,100,25);
@@ -124,7 +168,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		volumeValue.setBounds(300,60,100,25);
 		this.add(volumeValue);
 		
-		
+		// Scrubber Slider
 		
 		scrubberLabel = new JLabel("Scrubber");
 		scrubberLabel.setBounds(10,110,100,25);
@@ -144,6 +188,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		scrubberValue.setBounds(300,110,100,25);
 		this.add(scrubberValue);
 		
+
 		
 		
 		this.setVisible(true);
@@ -163,7 +208,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 			try
 			{
 				stopScrubberTimer();
-				audioManager.PlayWavFile();
+				audioManager.playWavFile();
 				initializeScrubber();
 				startScrubberTimer();
 			} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e1)
@@ -175,7 +220,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		else
 		if (src == stopButton)
 		{
-			audioManager.Stop();
+			audioManager.stop();
 			stopScrubberTimer();
 		}
 		else
@@ -184,10 +229,10 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 			try
 			{
 				stopScrubberTimer();
-				audioManager.NextSong();
+				audioManager.nextSong();
 				initializeScrubber();
 				startScrubberTimer();
-				currentSong.setText(audioManager.GetCurrentTitle());
+				currentSong.setText(audioManager.getCurrentTitle());
 				this.repaint();
 			} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e1)
 			{
@@ -201,10 +246,10 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 			try
 			{
 				stopScrubberTimer();
-				audioManager.PreviousSong();
+				audioManager.previousSong();
 				initializeScrubber();
 				startScrubberTimer();
-				currentSong.setText(audioManager.GetCurrentTitle());
+				currentSong.setText(audioManager.getCurrentTitle());
 				this.repaint();
 			} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e1)
 			{
@@ -212,7 +257,52 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 				e1.printStackTrace();
 			}
 		}
+		else
+		if (src == songListItem)	
+		{
+			JFileChooser fileChooser = new JFileChooser();
+			fileChooser.setMultiSelectionEnabled(true);
+			fileChooser.setAcceptAllFileFilterUsed(false);
+
+
+	        // Create a file filter to only allow image files to be selected.
+	        FileFilter fileFilter = new FileFilter() {
+	            @Override
+	            public boolean accept(File file) {
+	                return file.isDirectory() || file.getName().toLowerCase().endsWith(".wav");
+	            }
+	            
+	            @Override
+	            public String getDescription() {
+	                return "wav Files";
+	            }
+	        };
+	        
+	        fileChooser.addChoosableFileFilter(fileFilter);
+	        
+			int resultFileChooser = fileChooser.showOpenDialog(this);
+
+			if (resultFileChooser == JFileChooser.APPROVE_OPTION)
+			{
+				File[] files = fileChooser.getSelectedFiles();
 				
+				if (files.length > 0)
+				{
+					
+				}
+
+			}
+		}
+		else
+		if (src == exitItem)	
+		{
+			System.exit(0);
+		}
+		else
+		if (src == aboutItem)	
+		{
+		
+		}
 		
 	}
 
@@ -229,7 +319,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 			value = volumeSlider.getValue();
 			try
 			{
-				audioManager.SetVolume(value);
+				audioManager.setVolume(value);
 			} catch (LineUnavailableException | IOException e1)
 			{
 				// TODO Auto-generated catch block
@@ -242,7 +332,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		if (src == scrubberSlider)
 		{
 			value = scrubberSlider.getValue();
-			audioManager.SetClipPosition(clipLengthMicroseconds * value/100);
+			audioManager.setClipPosition(clipLengthMicroseconds * value/100);
 		}
 	}
 	
@@ -250,7 +340,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 	void initializeScrubber()
 	{
 		System.out.println("entering initializeScrubber");
-        clipLengthMicroseconds = audioManager.GetClipLength(); // Example clip length in microseconds
+        clipLengthMicroseconds = audioManager.getClipLength(); // Example clip length in microseconds
         
         // Convert microseconds to seconds
         clipLengthSeconds = clipLengthMicroseconds / 1_000_000;
@@ -269,7 +359,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
         
         
         
-        clipPositionMicroseconds = audioManager.GetClipPosition(); // Example clip length in microseconds
+        clipPositionMicroseconds = audioManager.getClipPosition(); // Example clip length in microseconds
         
         // Convert microseconds to seconds
         clipPositionSeconds = clipPositionMicroseconds / 1_000_000;
@@ -287,7 +377,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
         
 		
 		scrubberSlider.removeChangeListener(this);
-        scrubberSlider.setValue((int)(100 * (audioManager.GetClipPosition()/audioManager.GetClipLength())));
+        scrubberSlider.setValue((int)(100 * (audioManager.getClipPosition()/audioManager.getClipLength())));
 		scrubberSlider.addChangeListener(this);
 		
 		scrubberValue.setText(formattedPositionTime + "/" + formattedLengthTime);
@@ -311,10 +401,10 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 //		System.out.println("entering updateScrubber");
 
 		scrubberSlider.removeChangeListener(this);
-		scrubberSlider.setValue((int)(100 * ((double)audioManager.GetClipPosition()/(double)audioManager.GetClipLength())));
+		scrubberSlider.setValue((int)(100 * ((double)audioManager.getClipPosition()/(double)audioManager.getClipLength())));
 		scrubberSlider.addChangeListener(this);
 
-        clipPositionMicroseconds = audioManager.GetClipPosition(); // Example clip length in microseconds
+        clipPositionMicroseconds = audioManager.getClipPosition(); // Example clip length in microseconds
         
         // Convert microseconds to seconds
         clipPositionSeconds = clipPositionMicroseconds / 1_000_000;

@@ -9,6 +9,8 @@ import javax.sound.sampled.Clip;
 import javax.sound.sampled.Control;
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.Mixer.Info;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class AudioManager
@@ -22,11 +24,11 @@ public class AudioManager
     
     AudioInputStream stream;
     Clip clip;
-    
+    Mixer mixer;
 
     AudioManager() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
-    	ReadFileList();
+    	readFileList();
     	
     	if (stream == null)
     	{
@@ -38,9 +40,27 @@ public class AudioManager
     		clip = AudioSystem.getClip();
     		clip.open(stream);    		
     	}
+    	
+    	if (mixer == null)
+    	{
+    		mixer = AudioSystem.getMixer(null);
+    		Info mixerInfo = mixer.getMixerInfo();
+    		
+    		System.out.printf("Name %s\n", mixerInfo.getName());
+    		System.out.printf("Description %s\n", mixerInfo.getDescription());
+//    		System.out.printf("Description %s\n", mixerInfo.);
+    		
+    		mixer.open();
+    		
+        	Control[] controls = mixer.getControls();
+        	for (Control c : controls)
+        	{
+        		System.out.print(c.getType());
+        	}
+    	}
     }
     
-    private void ReadFileList()
+    private void readFileList()
     {
         // Create a File object representing the directory
         File directory = new File(directoryPath);
@@ -67,12 +87,17 @@ public class AudioManager
 
     }
     
-    public List<File> GetFiles()
+    public void setFiles(File[] files)
+    {
+    	
+    }
+    
+    public List<File> getFiles()
     {
     	return fileList;
     }
     
-    public void PlayWavFile() throws UnsupportedAudioFileException, IOException, LineUnavailableException
+    public void playWavFile() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
 //    	if (clip != null)
 //    	{
@@ -104,7 +129,7 @@ public class AudioManager
 //    	}
     }
     
-    public void Stop()
+    public void stop()
     {
     	if (clip!= null)
     	{
@@ -113,12 +138,12 @@ public class AudioManager
     	}
     }
     
-    public void SetPosition(long position)
+    public void setPosition(long position)
     {
     	clip.setMicrosecondPosition(position);
     }
     
-    public void NextSong() throws UnsupportedAudioFileException, IOException, LineUnavailableException
+    public void nextSong() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
 		clip.stop();
 		clip.close();  
@@ -132,10 +157,10 @@ public class AudioManager
     		fileIndex = 0;
     	}
     	
-    	PlayWavFile();
+    	playWavFile();
     }
     
-    public void PreviousSong() throws UnsupportedAudioFileException, IOException, LineUnavailableException
+    public void previousSong() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
 		clip.stop();
 		clip.close();  
@@ -149,14 +174,14 @@ public class AudioManager
     		fileIndex = fileList.size() - 1;
     	}
     	
-    	PlayWavFile();
+    	playWavFile();
     }
     
-    public void Pause()
+    public void pause()
     {
     }
     
-    public void SetVolume(float level) throws LineUnavailableException, IOException
+    public void setVolume(float level) throws LineUnavailableException, IOException
     {
 //        FloatControl volume = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
 //        if (volume != null) 
@@ -165,7 +190,7 @@ public class AudioManager
 //        }
     }
     
-    public long GetClipLength()
+    public long getClipLength()
     {
     	long clipLength = 0;
     	
@@ -177,7 +202,7 @@ public class AudioManager
     	return clipLength;
     }
     
-    public long GetClipPosition()
+    public long getClipPosition()
     {
     	long clipPosition = 0;
     	
@@ -189,7 +214,7 @@ public class AudioManager
     	return clipPosition;
     }
     
-    public void SetClipPosition(long fileIndex)
+    public void setClipPosition(long fileIndex)
     {
     	if (clip != null)
     	{
@@ -198,7 +223,7 @@ public class AudioManager
     }
     
  
-    public String GetCurrentTitle()
+    public String getCurrentTitle()
     {
     	return fileList.get(fileIndex).getName();
     }
