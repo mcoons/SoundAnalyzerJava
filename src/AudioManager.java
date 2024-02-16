@@ -24,9 +24,20 @@ public class AudioManager
     Clip clip;
     
 
-    AudioManager()
+    AudioManager() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
     	ReadFileList();
+    	
+    	if (stream == null)
+    	{
+    		stream = AudioSystem.getAudioInputStream(fileList.get(fileIndex));
+    	}
+
+    	if (clip == null)
+    	{
+    		clip = AudioSystem.getClip();
+    		clip.open(stream);    		
+    	}
     }
     
     private void ReadFileList()
@@ -63,43 +74,58 @@ public class AudioManager
     
     public void PlayWavFile() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
-    	if (clip != null)
-    	{
-    		clip.stop();
-    		clip.close();    		
-    	}
-    	if (stream != null)
-    	{
-    		stream.close();
-    	}
+//    	if (clip != null)
+//    	{
+//    		clip.stop();
+//    		clip.close();    		
+//    	}
+//    	if (stream != null)
+//    	{
+//    		stream.close();
+//    	}
     	
-    	stream = AudioSystem.getAudioInputStream(fileList.get(fileIndex));
-    	clip = AudioSystem.getClip();
-    	clip.open(stream);
+    	if (stream == null)
+    	{
+    		stream = AudioSystem.getAudioInputStream(fileList.get(fileIndex));
+    	}
+
+    	if (clip == null)
+    	{
+    		clip = AudioSystem.getClip();
+    		clip.open(stream);    		
+    	}
     	
     	clip.start();
     	
-    	Control[] controls = clip.getControls();
-    	for (Control c : controls)
-    	{
-    		System.out.print(c.getType());
-    	}
+//    	Control[] controls = clip.getControls();
+//    	for (Control c : controls)
+//    	{
+//    		System.out.print(c.getType());
+//    	}
     }
     
     public void Stop()
     {
-    	clip.stop();
-    	clip.close();
+    	if (clip!= null)
+    	{
+    		clip.stop();
+//    		clip.close();    		
+    	}
     }
     
-    public void Position(long position)
+    public void SetPosition(long position)
     {
     	clip.setMicrosecondPosition(position);
     }
     
     public void NextSong() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
-    	Stop();
+		clip.stop();
+		clip.close();  
+    	stream.close();
+    	clip = null;
+    	stream = null;
+    	
     	fileIndex++;
     	if (fileIndex > fileList.size() -1)
     	{
@@ -111,7 +137,12 @@ public class AudioManager
     
     public void PreviousSong() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
-    	Stop();
+		clip.stop();
+		clip.close();  
+    	stream.close();
+    	clip = null;
+    	stream = null;
+    	
     	fileIndex--;
     	if (fileIndex < 0)
     	{
@@ -128,24 +159,42 @@ public class AudioManager
     public void SetVolume(float level) throws LineUnavailableException, IOException
     {
 //        FloatControl volume = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
-//        if (volume != null) {
+//        if (volume != null) 
+//    	  {
 //            volume.setValue(level / 100.0f);     
 //        }
     }
     
     public long GetClipLength()
     {
-    	return clip.getMicrosecondLength();
+    	long clipLength = 0;
+    	
+    	if (clip != null) 
+    	{
+    		clipLength = clip.getMicrosecondLength();
+    	}
+    	
+    	return clipLength;
     }
     
     public long GetClipPosition()
     {
-    	return clip.getMicrosecondPosition();
+    	long clipPosition = 0;
+    	
+    	if (clip != null)
+    	{
+    		clipPosition = clip.getMicrosecondPosition();    		
+    	}
+    	
+    	return clipPosition;
     }
     
     public void SetClipPosition(long fileIndex)
     {
-    	clip.setMicrosecondPosition(fileIndex);
+    	if (clip != null)
+    	{
+    		clip.setMicrosecondPosition(fileIndex);    		
+    	}
     }
     
  

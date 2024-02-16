@@ -4,6 +4,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.imageio.ImageIO;
 import javax.sound.sampled.LineUnavailableException;
@@ -25,10 +27,36 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 	JLabel volumeValue, scrubberValue;
 	JButton playButton, stopButton, prevButton, nextButton;
 	JSlider volumeSlider, scrubberSlider;
+
+	enum PlayerState { STOPPED, PLAYING, PAUSED }
 	
+	PlayerState playerState = PlayerState.STOPPED;
+	
+    private Timer scrubberTimer;
+    private int scrubberInterval = 100;
+    
+    long clipLengthMicroseconds;
+    long clipLengthSeconds;
+    long lengthMinutes;
+    long lengthSeconds;
+    String formattedLengthMinutes;
+    String formattedLengthSeconds;
+    String formattedLengthTime;
+    
+    long clipPositionMicroseconds;
+    long clipPositionSeconds;
+    long positionMinutes;
+    long positionSeconds;
+    String formattedPositionMinutes;
+    String formattedPositionSeconds;
+    String formattedPositionTime;
+    
+    
+    
 	Player(AudioManager audioManager) throws IOException
 	{
 		this.audioManager = audioManager;
+//		scrubberTimer = new Timer();
 		
 		this.setTitle("Music Player");
 		this.setSize(400, 200);
@@ -120,19 +148,24 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		
 		this.setVisible(true);
 
-		
+		initializeScrubber();
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) 
 	{
+		System.out.println("entering actionPerformed");
+
 		Object src = e.getSource();
 		
 		if (src == playButton)
 		{
 			try
 			{
+				stopScrubberTimer();
 				audioManager.PlayWavFile();
+				initializeScrubber();
+				startScrubberTimer();
 			} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e1)
 			{
 				// TODO Auto-generated catch block
@@ -143,13 +176,17 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		if (src == stopButton)
 		{
 			audioManager.Stop();
+			stopScrubberTimer();
 		}
 		else
 		if (src == nextButton)
 		{
 			try
 			{
+				stopScrubberTimer();
 				audioManager.NextSong();
+				initializeScrubber();
+				startScrubberTimer();
 				currentSong.setText(audioManager.GetCurrentTitle());
 				this.repaint();
 			} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e1)
@@ -163,7 +200,10 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		{
 			try
 			{
+				stopScrubberTimer();
 				audioManager.PreviousSong();
+				initializeScrubber();
+				startScrubberTimer();
 				currentSong.setText(audioManager.GetCurrentTitle());
 				this.repaint();
 			} catch (UnsupportedAudioFileException | IOException | LineUnavailableException e1)
@@ -179,6 +219,8 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 	@Override
 	public void stateChanged(ChangeEvent e)
 	{
+		System.out.println("entering stateChanged");
+
 		Object src = e.getSource();
 		long value;
 		
@@ -199,12 +241,114 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 		else
 		if (src == scrubberSlider)
 		{
-			
+			value = scrubberSlider.getValue();
+			audioManager.SetClipPosition(clipLengthMicroseconds * value/100);
 		}
 	}
 	
 	
+	void initializeScrubber()
+	{
+		System.out.println("entering initializeScrubber");
+        clipLengthMicroseconds = audioManager.GetClipLength(); // Example clip length in microseconds
+        
+        // Convert microseconds to seconds
+        clipLengthSeconds = clipLengthMicroseconds / 1_000_000;
+
+        // Calculate minutes and seconds
+        lengthMinutes = clipLengthSeconds / 60;
+        lengthSeconds = clipLengthSeconds % 60;
+
+        // Format minutes and seconds to ensure they are two digits long
+        formattedLengthMinutes = String.format("%02d", lengthMinutes);
+        formattedLengthSeconds = String.format("%02d", lengthSeconds);
+
+        // Concatenate minutes and seconds with a colon
+        formattedLengthTime = formattedLengthMinutes + ":" + formattedLengthSeconds;
+        
+        
+        
+        
+        clipPositionMicroseconds = audioManager.GetClipPosition(); // Example clip length in microseconds
+        
+        // Convert microseconds to seconds
+        clipPositionSeconds = clipPositionMicroseconds / 1_000_000;
+
+        // Calculate minutes and seconds
+        positionMinutes = clipPositionSeconds / 60;
+        positionSeconds = clipPositionSeconds % 60;
+
+        // Format minutes and seconds to ensure they are two digits long
+        formattedPositionMinutes = String.format("%02d", positionMinutes);
+        formattedPositionSeconds = String.format("%02d", positionSeconds);
+
+        // Concatenate minutes and seconds with a colon
+        formattedPositionTime = formattedPositionMinutes + ":" + formattedPositionSeconds;
+        
+		
+		scrubberSlider.removeChangeListener(this);
+        scrubberSlider.setValue((int)(100 * (audioManager.GetClipPosition()/audioManager.GetClipLength())));
+		scrubberSlider.addChangeListener(this);
+		
+		scrubberValue.setText(formattedPositionTime + "/" + formattedLengthTime);
+
+	}
 	
+	void startScrubberTimer()
+	{
+		System.out.println("entering startScrubberTimer");
+		
+		scrubberTimer = new Timer();
+		scrubberTimer.scheduleAtFixedRate(new TimerTask() {
+            public void run() {
+                updateScrubber();
+            }
+        }, 0, scrubberInterval);
+	}
 	
+	void updateScrubber()
+	{
+//		System.out.println("entering updateScrubber");
+
+		scrubberSlider.removeChangeListener(this);
+		scrubberSlider.setValue((int)(100 * ((double)audioManager.GetClipPosition()/(double)audioManager.GetClipLength())));
+		scrubberSlider.addChangeListener(this);
+
+        clipPositionMicroseconds = audioManager.GetClipPosition(); // Example clip length in microseconds
+        
+        // Convert microseconds to seconds
+        clipPositionSeconds = clipPositionMicroseconds / 1_000_000;
+
+        // Calculate minutes and seconds
+        positionMinutes = clipPositionSeconds / 60;
+        positionSeconds = clipPositionSeconds % 60;
+
+        // Format minutes and seconds to ensure they are two digits long
+        formattedPositionMinutes = String.format("%02d", positionMinutes);
+        formattedPositionSeconds = String.format("%02d", positionSeconds);
+
+        // Concatenate minutes and seconds with a colon
+        formattedPositionTime = formattedPositionMinutes + ":" + formattedPositionSeconds;
+        
+		scrubberValue.setText(formattedPositionTime + "/" + formattedLengthTime);
+
+	}
+	
+	void stopScrubberTimer()
+	{
+		System.out.println("entering stopScrubberTimer");
+
+		if (scrubberTimer != null) {
+        	scrubberTimer.cancel();
+        	scrubberTimer = null;
+        }
+	}
+	
+	void rePaint()
+	{
+		System.out.println("entering rePaint");
+
+		this.rePaint();
+	}
 	
 }
