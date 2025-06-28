@@ -288,7 +288,7 @@ public class Player extends JFrame implements ActionListener, ChangeListener
 				
 				if (files.length > 0)
 				{
-					
+					audioManager.setFiles(files);
 				}
 
 			}
